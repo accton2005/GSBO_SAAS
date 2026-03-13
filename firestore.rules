@@ -51,21 +51,25 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
+      let data = getUserData();
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin' ||
+        ((data != null && data.role == 'superadmin') ||
           (request.auth.token.email == "accton2005@gmail.com" && request.auth.token.email_verified == true));
     }
 
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(path) ? get(path).data : null;
     }
 
     function belongsToOrg(orgId) {
-      return isAuthenticated() && getUserData().organizationId == orgId;
+      let data = getUserData();
+      return isAuthenticated() && data != null && data.organizationId == orgId;
     }
 
     function isAdmin() {
-      return isAuthenticated() && (getUserData().role == 'admin' || isSuperAdmin());
+      let data = getUserData();
+      return isAuthenticated() && data != null && (data.role == 'admin' || isSuperAdmin());
     }
 
     function hasRequiredFields(fields) {
@@ -118,13 +122,13 @@ service cloud.firestore {
     // ===============================================================
 
     match /organizations/{orgId} {
-      allow read: if belongsToOrg(orgId) || isSuperAdmin();
+      allow read: if belongsToOrg(orgId) || resource.data.createdBy == request.auth.uid || isSuperAdmin();
       allow create: if isAuthenticated() && isValidOrganization(request.resource.data);
       allow update: if (belongsToOrg(orgId) && getUserData().role == 'admin' && isValidOrganization(request.resource.data)) || isSuperAdmin();
     }
 
     match /users/{userId} {
-      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow read: if isOwner(userId) || belongsToOrg(resource.data.organizationId) || isSuperAdmin();
       allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
                     (request.resource.data.role != 'admin' || 
                      get(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)).data.createdBy == request.auth.uid ||

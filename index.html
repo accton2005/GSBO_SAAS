@@ -1,6 +1,37 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      // Aggressive fix for "Cannot set property fetch of #<Window> which has only a getter"
+      // This must run before any other scripts to make window.fetch writable.
+      (function() {
+        try {
+          var nf = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            value: nf,
+            configurable: true,
+            writable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          try {
+            window.fetch = window.fetch;
+          } catch (e2) {
+            // If all else fails, try to shadow it on the prototype
+            try {
+              if (window.Window && Window.prototype) {
+                Object.defineProperty(Window.prototype, 'fetch', {
+                  value: nf,
+                  configurable: true,
+                  writable: true,
+                  enumerable: true
+                });
+              }
+            } catch (e3) {}
+          }
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Google AI Studio App</title>
