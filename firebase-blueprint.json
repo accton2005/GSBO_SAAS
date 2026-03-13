@@ -1,0 +1,78 @@
+{
+  "entities": {
+    "Organization": {
+      "title": "Organization",
+      "description": "A tenant organization (e.g., a municipality)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the organization" },
+        "domain": { "type": "string", "description": "Subdomain for the organization" },
+        "subscriptionPlanId": { "type": "string", "description": "ID of the subscription plan" },
+        "status": { "type": "string", "enum": ["active", "suspended", "pending"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "appName": { "type": "string" },
+            "primaryColor": { "type": "string" },
+            "secondaryColor": { "type": "string" },
+            "logoUrl": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "domain", "status", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user within an organization",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "agent", "viewer"] },
+        "serviceId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["organizationId", "name", "email", "role", "createdAt"]
+    },
+    "Courrier": {
+      "title": "Courrier",
+      "description": "An administrative mail document",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string" },
+        "type": { "type": "string", "enum": ["entrant", "sortant"] },
+        "reference": { "type": "string" },
+        "objet": { "type": "string" },
+        "expediteur": { "type": "string" },
+        "destinataire": { "type": "string" },
+        "dateReception": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["nouveau", "en_cours", "traite", "archive"] },
+        "priority": { "type": "string", "enum": ["basse", "normale", "haute", "urgente"] },
+        "documentUrl": { "type": "string" },
+        "ocrText": { "type": "string" },
+        "qrCodeData": { "type": "string" },
+        "barcodeData": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "assignedTo": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["organizationId", "type", "reference", "objet", "status", "priority", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/organizations/{orgId}": {
+      "schema": "Organization",
+      "description": "Tenant organizations"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Platform users"
+    },
+    "/courriers/{courrierId}": {
+      "schema": "Courrier",
+      "description": "Mail documents"
+    }
+  }
+}

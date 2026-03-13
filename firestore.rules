@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: organizations
+    // Document ID: orgId
+    // Fields:
+    //   - name: string (required)
+    //   - domain: string (required)
+    //   - status: string (required, enum: ['active', 'suspended', 'pending'])
+    //   - createdAt: string (required, ISO 8601)
+    //   - createdBy: string (required, uid of creator)
+    //   - settings: map (optional)
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - organizationId: string (required)
+    //   - name: string (required)
+    //   - email: string (required, format: email)
+    //   - role: string (required, enum: ['admin', 'agent', 'viewer', 'superadmin'])
+    //   - createdAt: string (required, ISO 8601)
+    //
+    // Collection: courriers
+    // Document ID: courrierId
+    // Fields:
+    //   - organizationId: string (required)
+    //   - type: string (required, enum: ['entrant', 'sortant'])
+    //   - reference: string (required)
+    //   - objet: string (required)
+    //   - status: string (required, enum: ['nouveau', 'en_cours', 'traite', 'archive'])
+    //   - priority: string (required, enum: ['basse', 'normale', 'haute', 'urgente'])
+    //   - createdAt: string (required, ISO 8601)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin' ||
+          (request.auth.token.email == "accton2005@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function belongsToOrg(orgId) {
+      return isAuthenticated() && getUserData().organizationId == orgId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (getUserData().role == 'admin' || isSuperAdmin());
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidOrganization(data) {
+      return hasRequiredFields(['name', 'domain', 'status', 'createdAt', 'createdBy']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.domain is string && data.domain.size() > 0 && data.domain.size() < 50 &&
+             data.status in ['active', 'suspended', 'pending'] &&
+             data.createdBy == request.auth.uid &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidUser(data) {
+      return hasRequiredFields(['organizationId', 'name', 'email', 'role', 'createdAt']) &&
+             data.organizationId is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'agent', 'viewer', 'superadmin'] &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidCourrier(data) {
+      return hasRequiredFields(['organizationId', 'type', 'reference', 'objet', 'status', 'priority', 'createdAt']) &&
+             data.organizationId is string &&
+             data.type in ['entrant', 'sortant'] &&
+             data.reference is string && data.reference.size() > 0 &&
+             data.objet is string && data.objet.size() > 0 && data.objet.size() < 500 &&
+             data.status in ['nouveau', 'en_cours', 'traite', 'archive'] &&
+             data.priority in ['basse', 'normale', 'haute', 'urgente'] &&
+             isValidDateString(data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /organizations/{orgId} {
+      allow read: if belongsToOrg(orgId) || isSuperAdmin();
+      allow create: if isAuthenticated() && isValidOrganization(request.resource.data);
+      allow update: if (belongsToOrg(orgId) && getUserData().role == 'admin' && isValidOrganization(request.resource.data)) || isSuperAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role != 'admin' || 
+                     get(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)).data.createdBy == request.auth.uid ||
+                     isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || 
+                     (belongsToOrg(resource.data.organizationId) && getUserData().role == 'admin') || 
+                     isSuperAdmin());
+      allow delete: if isSuperAdmin() || (belongsToOrg(resource.data.organizationId) && getUserData().role == 'admin' && userId != request.auth.uid);
+    }
+
+    match /courriers/{courrierId} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow create: if belongsToOrg(request.resource.data.organizationId) && 
+                    (getUserData().role in ['admin', 'agent']) && 
+                    isValidCourrier(request.resource.data);
+      allow update: if belongsToOrg(resource.data.organizationId) && 
+                    (getUserData().role in ['admin', 'agent']) && 
+                    isValidCourrier(request.resource.data);
+      allow delete: if belongsToOrg(resource.data.organizationId) && 
+                    (getUserData().role == 'admin') || isSuperAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

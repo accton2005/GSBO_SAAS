@@ -1,0 +1,7 @@
+{
+  "name": "SaaS Gestion des Courriers Administratifs",
+  "description": "Plateforme SaaS multi-tenant pour la gestion de la correspondance administrative, incluant l'OCR, le suivi par QR code et les circuits de visa.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
