@@ -3,7 +3,7 @@ import { Sidebar } from './Sidebar';
 
 interface LayoutProps {
   children: React.ReactNode;
-  role: 'admin' | 'agent' | 'viewer' | 'superadmin';
+  role: 'admin' | 'agent' | 'viewer' | 'superadmin' | 'secretariat' | 'chef_service' | 'direction';
   orgName?: string;
 }
 

@@ -51,7 +51,10 @@ export const Users: React.FC = () => {
     admin: 'bg-indigo-100 text-indigo-700',
     agent: 'bg-emerald-100 text-emerald-700',
     viewer: 'bg-slate-100 text-slate-700',
-    superadmin: 'bg-rose-100 text-rose-700'
+    superadmin: 'bg-rose-100 text-rose-700',
+    secretariat: 'bg-amber-100 text-amber-700',
+    chef_service: 'bg-purple-100 text-purple-700',
+    direction: 'bg-blue-100 text-blue-700'
   };
 
   const filteredUsers = users.filter(u => 

@@ -152,6 +152,39 @@ service cloud.firestore {
                     (getUserData().role == 'admin') || isSuperAdmin();
     }
 
+    match /app_settings/{orgId} {
+      allow read: if belongsToOrg(orgId) || isSuperAdmin();
+      allow write: if belongsToOrg(orgId) && isAdmin();
+    }
+
+    match /services_definitions/{serviceId} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow write: if (isAuthenticated() && (request.resource.data.organizationId != null ? belongsToOrg(request.resource.data.organizationId) : belongsToOrg(resource.data.organizationId)) && isAdmin()) || isSuperAdmin();
+    }
+
+    match /courrier_types/{typeId} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow write: if (isAuthenticated() && (request.resource.data.organizationId != null ? belongsToOrg(request.resource.data.organizationId) : belongsToOrg(resource.data.organizationId)) && isAdmin()) || isSuperAdmin();
+    }
+
+    match /courrier_statuses/{statusId} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow write: if (isAuthenticated() && (request.resource.data.organizationId != null ? belongsToOrg(request.resource.data.organizationId) : belongsToOrg(resource.data.organizationId)) && isAdmin()) || isSuperAdmin();
+    }
+
+    match /courrier_priorities/{priorityId} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow write: if (isAuthenticated() && (request.resource.data.organizationId != null ? belongsToOrg(request.resource.data.organizationId) : belongsToOrg(resource.data.organizationId)) && isAdmin()) || isSuperAdmin();
+    }
+
+    match /admin_activity_logs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAuthenticated() && isAdmin() && 
+                    request.resource.data.adminId == request.auth.uid &&
+                    request.resource.data.adminEmail == request.auth.token.email;
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

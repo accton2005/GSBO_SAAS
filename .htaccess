@@ -1,0 +1,12 @@
+# Configuration Apache pour l'environnement local XAMPP
+# Redirection vers le contrôleur frontal (index.php)
+
+RewriteEngine On
+
+# Empêcher le listage des répertoires
+Options -Indexes
+
+# Rediriger tout vers index.php si le fichier ou dossier n'existe pas
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L,QSA]

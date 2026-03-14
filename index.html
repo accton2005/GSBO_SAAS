@@ -2,34 +2,44 @@
 <html lang="en">
   <head>
     <script>
-      // Aggressive fix for "Cannot set property fetch of #<Window> which has only a getter"
-      // This must run before any other scripts to make window.fetch writable.
+      // Fix for "Cannot set property fetch of #<Window> which has only a getter"
+      // This makes window.fetch writable or provides a setter so libraries can wrap it.
       (function() {
         try {
-          var nf = window.fetch;
-          Object.defineProperty(window, 'fetch', {
-            value: nf,
-            configurable: true,
-            writable: true,
-            enumerable: true
-          });
-        } catch (e) {
-          try {
-            window.fetch = window.fetch;
-          } catch (e2) {
-            // If all else fails, try to shadow it on the prototype
+          var originalFetch = window.fetch;
+          if (typeof originalFetch !== 'function') return;
+
+          var currentFetch = originalFetch;
+
+          function defineOn(obj) {
             try {
-              if (window.Window && Window.prototype) {
-                Object.defineProperty(Window.prototype, 'fetch', {
-                  value: nf,
-                  configurable: true,
-                  writable: true,
-                  enumerable: true
-                });
-              }
-            } catch (e3) {}
+              Object.defineProperty(obj, 'fetch', {
+                get: function() { return currentFetch; },
+                set: function(v) { currentFetch = v; },
+                configurable: true,
+                enumerable: true
+              });
+              return true;
+            } catch (e) {
+              return false;
+            }
           }
-        }
+
+          // Try to define on window directly
+          if (defineOn(window)) return;
+
+          // If that fails, try to define on the prototype where the getter might live
+          var proto = window.Window ? window.Window.prototype : Object.getPrototypeOf(window);
+          while (proto && proto !== Object.prototype) {
+            try {
+              var desc = Object.getOwnPropertyDescriptor(proto, 'fetch');
+              if (desc && (desc.get || desc.set || desc.writable === false)) {
+                if (defineOn(proto)) return;
+              }
+            } catch (e) {}
+            proto = Object.getPrototypeOf(proto);
+          }
+        } catch (e) {}
       })();
     </script>
     <meta charset="UTF-8" />

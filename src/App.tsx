@@ -10,6 +10,8 @@ import { Settings } from './pages/Settings';
 import { Users } from './pages/Users';
 import { Archives } from './pages/Archives';
 import { Stats } from './pages/Stats';
+import WorkflowBuilder from './pages/WorkflowBuilder';
+import WorkflowDashboard from './pages/WorkflowDashboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -92,6 +94,22 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout role={user?.role || 'viewer'} orgName={organization?.name}>
             <Users />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/workflows" element={
+        <ProtectedRoute>
+          <Layout role={user?.role || 'viewer'} orgName={organization?.name}>
+            <WorkflowDashboard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/workflow-builder" element={
+        <ProtectedRoute>
+          <Layout role={user?.role || 'viewer'} orgName={organization?.name}>
+            <WorkflowBuilder />
           </Layout>
         </ProtectedRoute>
       } />

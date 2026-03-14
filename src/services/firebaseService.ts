@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { Courrier, User, Organization } from '../types';
+import { auditService } from './auditService';
 
 // Organizations
 export const getOrganization = (orgId: string, callback: (org: Organization | null) => void) => {
@@ -33,6 +34,7 @@ export const createOrganization = async (orgData: Omit<Organization, 'id'>) => {
   const path = 'organizations';
   try {
     const docRef = await addDoc(collection(db, 'organizations'), orgData);
+    await auditService.logAction('CREATE_ORG', `Created organization: ${orgData.name}`, docRef.id);
     return docRef.id;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -43,6 +45,7 @@ export const updateOrganization = async (orgId: string, data: Partial<Organizati
   const path = `organizations/${orgId}`;
   try {
     await updateDoc(doc(db, 'organizations', orgId), data);
+    await auditService.logAction('UPDATE_ORG', `Updated organization settings for: ${orgId}`, orgId);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -64,6 +67,7 @@ export const deleteUser = async (userId: string) => {
   const path = `users/${userId}`;
   try {
     await deleteDoc(doc(db, 'users', userId));
+    await auditService.logAction('DELETE_USER', `Deleted user account: ${userId}`, userId);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -73,6 +77,7 @@ export const createUser = async (userData: Omit<User, 'id'>) => {
   const path = 'users';
   try {
     const docRef = await addDoc(collection(db, 'users'), userData);
+    await auditService.logAction('CREATE_USER', `Created new user: ${userData.email} with role ${userData.role}`, docRef.id);
     return docRef.id;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -122,6 +127,7 @@ export const deleteCourrier = async (courrierId: string) => {
   const path = `courriers/${courrierId}`;
   try {
     await deleteDoc(doc(db, 'courriers', courrierId));
+    await auditService.logAction('DELETE_COURRIER', `Deleted courrier: ${courrierId}`, courrierId);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }

@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
-import { X, Upload, Scan, FileText, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, Scan, FileText, Check, GitBranch, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { performOCR } from '../services/ocrService';
 import { generateCourrierReference } from '../services/qrService';
+import { Courrier, WorkflowInstance, WorkflowStep } from '../types';
+import { workflowService } from '../services/workflowService';
+
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 const schema = z.object({
   objet: z.string().min(5, 'L\'objet est requis'),
@@ -17,21 +26,50 @@ type FormData = z.infer<typeof schema>;
 
 interface CourrierModalProps {
   type: 'entrant' | 'sortant';
+  courrier?: Courrier | null;
   onClose: () => void;
   onSave: (data: any) => void;
 }
 
-export const CourrierModal: React.FC<CourrierModalProps> = ({ type, onClose, onSave }) => {
+export const CourrierModal: React.FC<CourrierModalProps> = ({ type, courrier, onClose, onSave }) => {
   const [isScanning, setIsScanning] = useState(false);
-  const [ocrText, setOcrText] = useState('');
+  const [ocrText, setOcrText] = useState(courrier?.ocrText || '');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [workflowInstance, setWorkflowInstance] = useState<WorkflowInstance | null>(null);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
+  const [loadingWorkflow, setLoadingWorkflow] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      priority: 'normale'
+      priority: courrier?.priority || 'normale',
+      objet: courrier?.objet || '',
+      expediteur: courrier?.expediteur || '',
+      destinataire: courrier?.destinataire || '',
     }
   });
+
+  useEffect(() => {
+    if (courrier?.workflowInstanceId) {
+      loadWorkflowData(courrier.workflowInstanceId);
+    }
+  }, [courrier]);
+
+  const loadWorkflowData = async (instanceId: string) => {
+    setLoadingWorkflow(true);
+    try {
+      const instance = await workflowService.getWorkflowInstance(instanceId);
+      if (instance) {
+        setWorkflowInstance(instance);
+        const steps = await workflowService.getWorkflowSteps(instance.workflowId);
+        setWorkflowSteps(steps);
+      }
+    } catch (error) {
+      console.error('Error loading workflow data:', error);
+    } finally {
+      setLoadingWorkflow(false);
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,15 +97,23 @@ export const CourrierModal: React.FC<CourrierModalProps> = ({ type, onClose, onS
   };
 
   const onSubmit = (data: FormData) => {
-    const reference = generateCourrierReference(type);
-    onSave({
-      ...data,
-      type,
-      reference,
-      ocrText,
-      createdAt: new Date().toISOString(),
-      status: 'nouveau'
-    });
+    if (courrier) {
+      onSave({
+        ...courrier,
+        ...data,
+        ocrText,
+      });
+    } else {
+      const reference = generateCourrierReference(type);
+      onSave({
+        ...data,
+        type,
+        reference,
+        ocrText,
+        createdAt: new Date().toISOString(),
+        status: 'nouveau'
+      });
+    }
   };
 
   return (
@@ -75,12 +121,105 @@ export const CourrierModal: React.FC<CourrierModalProps> = ({ type, onClose, onS
       <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-xl font-bold text-slate-900">
-            Enregistrer un Courrier {type === 'entrant' ? 'Entrant' : 'Sortant'}
+            {courrier ? 'Détails du Courrier' : `Enregistrer un Courrier ${type === 'entrant' ? 'Entrant' : 'Sortant'}`}
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-4">
+            {courrier && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono font-bold text-slate-600">
+                {courrier.reference}
+              </div>
+            )}
+            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+              <X size={20} />
+            </button>
+          </div>
         </div>
+
+        {/* Workflow Status Indicator */}
+        {courrier && (
+          <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <GitBranch size={18} className="text-indigo-600" />
+                <span className="text-sm font-bold text-slate-700">Cycle de vie du courrier</span>
+              </div>
+              <div className="text-xs font-medium text-slate-500">
+                Statut actuel: <span className="text-indigo-600 font-bold uppercase">{courrier.status.replace('_', ' ')}</span>
+              </div>
+            </div>
+            
+            <div className="relative">
+              {/* Progress Bar Background */}
+              <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-200 -translate-y-1/2 rounded-full"></div>
+              
+              {/* Progress Bar Active */}
+              <div 
+                className="absolute top-1/2 left-0 h-1 bg-indigo-600 -translate-y-1/2 rounded-full transition-all duration-500"
+                style={{ 
+                  width: courrier.status === 'traite' ? '100%' : 
+                         courrier.status === 'en_workflow' ? `${((workflowInstance?.currentStepIndex || 0) + 1) / (workflowSteps.length + 1) * 100}%` :
+                         '20%'
+                }}
+              ></div>
+
+              <div className="relative flex justify-between">
+                {/* Step 1: Registered */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10 transition-colors",
+                    courrier.status !== 'nouveau' ? "bg-indigo-600 text-white" : "bg-indigo-600 text-white ring-4 ring-indigo-100"
+                  )}>
+                    <Check size={14} />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-600 uppercase">Enregistré</span>
+                </div>
+
+                {/* Workflow Steps */}
+                {workflowSteps.length > 0 ? (
+                  workflowSteps.map((step, index) => {
+                    const isCompleted = (workflowInstance?.currentStepIndex || 0) > index || workflowInstance?.status === 'termine';
+                    const isCurrent = (workflowInstance?.currentStepIndex || 0) === index && workflowInstance?.status === 'en_cours';
+                    
+                    return (
+                      <div key={step.id} className="flex flex-col items-center gap-2">
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10 transition-colors",
+                          isCompleted ? "bg-indigo-600 text-white" : 
+                          isCurrent ? "bg-amber-500 text-white ring-4 ring-amber-100" : 
+                          "bg-slate-200 text-slate-400"
+                        )}>
+                          {isCompleted ? <Check size={14} /> : isCurrent ? <Clock size={14} /> : <span className="text-[10px]">{index + 1}</span>}
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase">{step.name}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10 transition-colors",
+                      courrier.status === 'en_workflow' || courrier.status === 'traite' ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-400"
+                    )}>
+                      <Clock size={14} />
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-600 uppercase">Traitement</span>
+                  </div>
+                )}
+
+                {/* Step Final: Validated */}
+                <div className="flex flex-col items-center gap-2">
+                  <div className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-sm z-10 transition-colors",
+                    courrier.status === 'traite' ? "bg-emerald-500 text-white ring-4 ring-emerald-100" : "bg-slate-200 text-slate-400"
+                  )}>
+                    <CheckCircle2 size={14} />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-600 uppercase">Validé</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Form Side */}
@@ -220,7 +359,3 @@ export const CourrierModal: React.FC<CourrierModalProps> = ({ type, onClose, onS
     </div>
   );
 };
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
-}

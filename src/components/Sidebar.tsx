@@ -9,7 +9,9 @@ import {
   Archive, 
   ShieldCheck,
   BarChart3,
-  LogOut
+  LogOut,
+  GitBranch,
+  Settings2
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -20,7 +22,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 interface SidebarProps {
-  role: 'admin' | 'agent' | 'viewer' | 'superadmin';
+  role: 'admin' | 'agent' | 'viewer' | 'superadmin' | 'secretariat' | 'chef_service' | 'direction';
   orgName?: string;
 }
 
@@ -30,13 +32,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, orgName }) => {
   const isSuperAdmin = role === 'superadmin';
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/', roles: ['admin', 'agent', 'viewer'] },
-    { icon: Inbox, label: 'Courriers Entrants', path: '/entrants', roles: ['admin', 'agent', 'viewer'] },
-    { icon: Send, label: 'Courriers Sortants', path: '/sortants', roles: ['admin', 'agent', 'viewer'] },
-    { icon: Archive, label: 'Archives', path: '/archives', roles: ['admin', 'agent', 'viewer'] },
+    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/', roles: ['admin', 'agent', 'viewer', 'secretariat', 'chef_service', 'direction'] },
+    { icon: Inbox, label: 'Courriers Entrants', path: '/entrants', roles: ['admin', 'agent', 'viewer', 'secretariat', 'chef_service', 'direction'] },
+    { icon: Send, label: 'Courriers Sortants', path: '/sortants', roles: ['admin', 'agent', 'viewer', 'secretariat', 'chef_service', 'direction'] },
+    { icon: GitBranch, label: 'Suivi Workflows', path: '/workflows', roles: ['admin', 'agent', 'secretariat', 'chef_service', 'direction'] },
+    { icon: Archive, label: 'Archives', path: '/archives', roles: ['admin', 'agent', 'viewer', 'secretariat', 'chef_service', 'direction'] },
     { icon: Users, label: 'Utilisateurs', path: '/users', roles: ['admin'] },
+    { icon: Settings2, label: 'Config. Workflows', path: '/workflow-builder', roles: ['admin'] },
     { icon: BarChart3, label: 'Statistiques', path: '/stats', roles: ['admin'] },
-    { icon: Settings, label: 'Paramètres', path: '/settings', roles: ['admin'] },
+    { icon: Settings, label: 'Paramétrage', path: '/settings', roles: ['admin'] },
     // Super Admin items
     { icon: ShieldCheck, label: 'Gestion SaaS', path: '/saas-admin', roles: ['superadmin'] },
   ];
