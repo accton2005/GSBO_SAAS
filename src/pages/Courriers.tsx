@@ -17,6 +17,7 @@ import { Courrier, CourrierStatus, Priority, WorkflowDefinition } from '../types
 import { CourrierModal } from '../components/CourrierModal';
 import { getCourriers, createCourrier, deleteCourrier, updateCourrier } from '../services/firebaseService';
 import { workflowService } from '../services/workflowService';
+import { integrationService } from '../services/integrationService';
 import { useAuth } from '../contexts/AuthContext';
 import WorkflowTimeline from '../components/WorkflowTimeline';
 import { motion, AnimatePresence } from 'motion/react';
@@ -76,12 +77,23 @@ export const Courriers: React.FC<{ type: 'entrant' | 'sortant' }> = ({ type }) =
         await updateCourrier(selectedCourrier.id, data);
         setIsEditModalOpen(false);
       } else {
-        await createCourrier({
+        const newCourrier = {
           ...data,
           organizationId: organization.id,
           status: 'nouveau',
           createdAt: new Date().toISOString()
-        });
+        };
+        const result = await createCourrier(newCourrier);
+        
+        // Trigger Webhook
+        if (result) {
+          const eventType = type === 'entrant' ? 'courrier_entrant_created' : 'courrier_sortant_created';
+          integrationService.triggerWebhook(organization.id, eventType, {
+            id: result,
+            ...newCourrier
+          });
+        }
+
         setIsModalOpen(false);
       }
       setSelectedCourrier(null);

@@ -13,6 +13,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { integrationService } from './integrationService';
 import { 
   WorkflowDefinition, 
   WorkflowStep, 
@@ -207,6 +208,18 @@ export const workflowService = {
           await updateDoc(doc(db, 'courriers', courrierId), {
             status: 'traite'
           });
+
+          // Trigger Webhook
+          const courrierDoc = await getDoc(doc(db, 'courriers', courrierId));
+          if (courrierDoc.exists()) {
+            const courrierData = courrierDoc.data();
+            integrationService.triggerWebhook(courrierData.organizationId, 'workflow_validated', {
+              courrierId,
+              instanceId,
+              status: 'termine',
+              courrier: courrierData
+            });
+          }
         }
       }
     } else if (actionType === 'refuser') {

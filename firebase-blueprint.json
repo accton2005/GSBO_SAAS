@@ -59,6 +59,63 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["organizationId", "type", "reference", "objet", "status", "priority", "createdAt"]
+    },
+    "SMTPSettings": {
+      "title": "SMTP Settings",
+      "description": "SMTP configuration for an organization",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "number" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "encryption": { "type": "string", "enum": ["tls", "ssl", "none"] },
+        "fromEmail": { "type": "string" },
+        "fromName": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      }
+    },
+    "APIToken": {
+      "title": "API Token",
+      "description": "REST API access tokens",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string" },
+        "name": { "type": "string" },
+        "token": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "revoked"] }
+      }
+    },
+    "Webhook": {
+      "title": "Webhook",
+      "description": "Outgoing webhooks for events",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string" },
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "eventType": { "type": "string" },
+        "secret": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      }
+    },
+    "APILog": {
+      "title": "API Log",
+      "description": "History of API requests",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string" },
+        "tokenId": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "method": { "type": "string" },
+        "statusCode": { "type": "number" },
+        "ipAddress": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -73,6 +130,22 @@
     "/courriers/{courrierId}": {
       "schema": "Courrier",
       "description": "Mail documents"
+    },
+    "/smtp_settings/{id}": {
+      "schema": "SMTPSettings",
+      "description": "SMTP configurations"
+    },
+    "/api_tokens/{id}": {
+      "schema": "APIToken",
+      "description": "API access tokens"
+    },
+    "/webhooks/{id}": {
+      "schema": "Webhook",
+      "description": "Outgoing webhooks"
+    },
+    "/api_logs/{id}": {
+      "schema": "APILog",
+      "description": "API request logs"
     }
   }
 }

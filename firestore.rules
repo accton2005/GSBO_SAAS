@@ -117,6 +117,38 @@ service cloud.firestore {
              isValidDateString(data.createdAt);
     }
 
+    function isValidSMTPSettings(data) {
+      return hasRequiredFields(['organizationId', 'host', 'port', 'username', 'password', 'encryption', 'fromEmail', 'fromName', 'status']) &&
+             data.organizationId is string &&
+             data.host is string && data.port is number &&
+             data.username is string && data.password is string &&
+             data.encryption in ['tls', 'ssl', 'none'] &&
+             isValidEmail(data.fromEmail) &&
+             data.fromName is string &&
+             data.status in ['active', 'inactive'];
+    }
+
+    function isValidAPIToken(data) {
+      return hasRequiredFields(['organizationId', 'name', 'token', 'createdBy', 'createdAt', 'expiresAt', 'status']) &&
+             data.organizationId is string &&
+             data.name is string && data.name.size() > 0 &&
+             data.token is string &&
+             data.createdBy == request.auth.uid &&
+             isValidDateString(data.createdAt) &&
+             isValidDateString(data.expiresAt) &&
+             data.status in ['active', 'revoked'];
+    }
+
+    function isValidWebhook(data) {
+      return hasRequiredFields(['organizationId', 'name', 'url', 'eventType', 'secret', 'status']) &&
+             data.organizationId is string &&
+             data.name is string && data.name.size() > 0 &&
+             data.url is string && data.url.matches("^https?://.*") &&
+             data.eventType is string &&
+             data.secret is string &&
+             data.status in ['active', 'inactive'];
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -182,6 +214,27 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isAdmin() && 
                     request.resource.data.adminId == request.auth.uid &&
                     request.resource.data.adminEmail == request.auth.token.email;
+      allow update, delete: if false;
+    }
+
+    match /smtp_settings/{id} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow write: if (isAuthenticated() && (request.resource.data.organizationId != null ? belongsToOrg(request.resource.data.organizationId) : belongsToOrg(resource.data.organizationId)) && isAdmin()) || isSuperAdmin();
+    }
+
+    match /api_tokens/{id} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow write: if (isAuthenticated() && (request.resource.data.organizationId != null ? belongsToOrg(request.resource.data.organizationId) : belongsToOrg(resource.data.organizationId)) && isAdmin()) || isSuperAdmin();
+    }
+
+    match /webhooks/{id} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow write: if (isAuthenticated() && (request.resource.data.organizationId != null ? belongsToOrg(request.resource.data.organizationId) : belongsToOrg(resource.data.organizationId)) && isAdmin()) || isSuperAdmin();
+    }
+
+    match /api_logs/{id} {
+      allow read: if belongsToOrg(resource.data.organizationId) || isSuperAdmin();
+      allow create: if false; // Only created via server
       allow update, delete: if false;
     }
 

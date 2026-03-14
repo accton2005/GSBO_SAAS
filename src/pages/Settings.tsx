@@ -12,6 +12,7 @@ import {
   Shield, 
   Bell, 
   Database,
+  Share2,
   Save,
   Check,
   Plus,
@@ -40,6 +41,7 @@ import { ScannerSettings } from './Settings/ScannerSettings';
 import { SecuritySettings } from './Settings/SecuritySettings';
 import { NotificationSettings } from './Settings/NotificationSettings';
 import { BackupSettings } from './Settings/BackupSettings';
+import { IntegrationSettings } from './Settings/IntegrationSettings';
 
 export const Settings: React.FC = () => {
   const { organization, user } = useAuth();
@@ -82,6 +84,7 @@ export const Settings: React.FC = () => {
     { id: 'scanner', label: 'Scanner', icon: Scan },
     { id: 'security', label: 'Sécurité', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'integrations', label: 'Intégrations', icon: Share2 },
     { id: 'backup', label: 'Sauvegarde', icon: Database },
   ];
 
@@ -134,6 +137,7 @@ export const Settings: React.FC = () => {
                 {activeTab === 'scanner' && <ScannerSettings settings={appSettings} onUpdate={loadSettings} />}
                 {activeTab === 'security' && <SecuritySettings settings={appSettings} onUpdate={loadSettings} />}
                 {activeTab === 'notifications' && <NotificationSettings settings={appSettings} onUpdate={loadSettings} />}
+                {activeTab === 'integrations' && <IntegrationSettings organizationId={organization!.id} />}
                 {activeTab === 'backup' && <BackupSettings settings={appSettings} onUpdate={loadSettings} />}
               </div>
             )}
