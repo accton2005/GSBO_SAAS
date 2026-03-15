@@ -31,6 +31,7 @@ export interface User {
   email: string;
   photoURL?: string;
   role: UserRole;
+  password?: string;
   serviceId?: string;
   lastLogin?: string;
   createdAt: string;

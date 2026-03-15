@@ -9,17 +9,32 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
-  Edit
+  Edit,
+  X,
+  Plus
 } from 'lucide-react';
 import { User, UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { getUsers, deleteUser } from '../services/firebaseService';
+import { getUsers, deleteUser, createUser, updateUser } from '../services/firebaseService';
 
 export const Users: React.FC = () => {
   const { organization, user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  // New user form state
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: 'agent' as UserRole,
+    password: ''
+  });
+
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!organization?.id) return;
@@ -34,22 +49,84 @@ export const Users: React.FC = () => {
 
   const handleDeleteUser = async (userId: string) => {
     if (userId === currentUser?.id) {
-      alert("Vous ne pouvez pas supprimer votre propre compte.");
+      setError("Vous ne pouvez pas supprimer votre propre compte.");
       return;
     }
 
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
-      try {
-        await deleteUser(userId);
-      } catch (error) {
-        console.error('Error deleting user:', error);
-      }
+    // In a real app, we'd use a custom modal for confirmation
+    try {
+      await deleteUser(userId);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setError("Erreur lors de la suppression de l'utilisateur.");
     }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization?.id) return;
+
+    if (!editingUser && newUser.password.length < 4) {
+      setError("Le mot de passe doit contenir au moins 4 caractères.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      if (editingUser) {
+        const updateData: any = {
+          name: newUser.name,
+          displayName: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+        };
+        if (newUser.password) {
+          updateData.password = newUser.password;
+        }
+        await updateUser(editingUser.id, updateData);
+      } else {
+        await createUser({
+          name: newUser.name,
+          displayName: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          password: newUser.password,
+          organizationId: organization.id,
+          createdAt: new Date().toISOString()
+        });
+      }
+      setIsModalOpen(false);
+      setEditingUser(null);
+      setNewUser({ name: '', email: '', role: 'agent', password: '' });
+    } catch (error) {
+      console.error('Error saving user:', error);
+      setError("Erreur lors de l'enregistrement de l'utilisateur. Vérifiez vos permissions.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setNewUser({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      password: user.password || ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const openCreateModal = () => {
+    setEditingUser(null);
+    setNewUser({ name: '', email: '', role: 'agent', password: '' });
+    setIsModalOpen(true);
   };
 
   const roleColors: Record<UserRole, string> = {
     admin: 'bg-indigo-100 text-indigo-700',
-    agent: 'bg-emerald-100 text-emerald-700',
+    agent: 'bg-indigo-100 text-indigo-700',
     viewer: 'bg-slate-100 text-slate-700',
     superadmin: 'bg-rose-100 text-rose-700',
     secretariat: 'bg-amber-100 text-amber-700',
@@ -69,11 +146,27 @@ export const Users: React.FC = () => {
           <h2 className="text-2xl font-bold text-slate-900">Gestion des Utilisateurs</h2>
           <p className="text-slate-500">Gérez les membres de votre organisation et leurs permissions.</p>
         </div>
-        <button className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
+        <button 
+          onClick={openCreateModal}
+          className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+        >
           <UserPlus size={20} />
-          Inviter un Utilisateur
+          Créer un Utilisateur
         </button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-xl flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <XCircle size={18} />
+            <p className="text-sm font-medium">{error}</p>
+          </div>
+          <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-600">
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -87,7 +180,7 @@ export const Users: React.FC = () => {
         </div>
         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
           <p className="text-sm text-slate-500 font-medium">Agents</p>
-          <p className="text-2xl font-bold text-emerald-600">{users.filter(u => u.role === 'agent').length}</p>
+          <p className="text-2xl font-bold text-indigo-600">{users.filter(u => u.role === 'agent').length}</p>
         </div>
       </div>
 
@@ -154,7 +247,7 @@ export const Users: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-emerald-600">
+                      <div className="flex items-center gap-1.5 text-indigo-600">
                         <CheckCircle2 size={16} />
                         <span className="text-xs font-medium">Actif</span>
                       </div>
@@ -167,14 +260,18 @@ export const Users: React.FC = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
+                          onClick={() => openEditModal(user)}
+                          title="Modifier" 
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button 
                           onClick={() => handleDeleteUser(user.id)}
                           title="Supprimer" 
                           className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                         >
                           <Trash2 size={18} />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
-                          <MoreVertical size={18} />
                         </button>
                       </div>
                     </td>
@@ -185,6 +282,88 @@ export const Users: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Create User Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-600 text-white">
+              <h3 className="font-bold text-lg">
+                {editingUser ? 'Modifier l\'utilisateur' : 'Créer un nouvel utilisateur'}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-700">Nom complet</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  placeholder="Ex: Jean Dupont"
+                  className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-700">Adresse e-mail</label>
+                <input 
+                  type="email" 
+                  required
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  placeholder="jean.dupont@example.com"
+                  className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-700">Mot de passe</label>
+                <input 
+                  type="password" 
+                  required={!editingUser}
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  placeholder={editingUser ? "Laisser vide pour ne pas changer" : "••••••••"}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-700">Rôle</label>
+                <select 
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value as UserRole})}
+                  className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                >
+                  <option value="agent">Agent</option>
+                  <option value="admin">Administrateur</option>
+                  <option value="secretariat">Secrétariat</option>
+                  <option value="chef_service">Chef de Service</option>
+                  <option value="direction">Direction</option>
+                  <option value="viewer">Observateur</option>
+                </select>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-4 py-2 border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? (editingUser ? 'Enregistrement...' : 'Création...') : (editingUser ? 'Enregistrer' : 'Créer')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

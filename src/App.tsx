@@ -6,6 +6,7 @@ import { Courriers } from './pages/Courriers';
 import { Registration } from './pages/Registration';
 import { Login } from './pages/Login';
 import { SuperAdmin } from './pages/SuperAdmin';
+import LandingPage from './pages/LandingPage';
 import { Settings } from './pages/Settings';
 import { Users } from './pages/Users';
 import { Archives } from './pages/Archives';
@@ -38,6 +39,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/register" element={<Registration />} />
       <Route path="/login" element={<Login />} />
       
@@ -117,9 +119,7 @@ function AppRoutes() {
       <Route path="/saas-admin" element={
         <ProtectedRoute>
           {user?.role === 'superadmin' ? (
-            <Layout role="superadmin">
-              <SuperAdmin />
-            </Layout>
+            <SuperAdmin />
           ) : (
             <Navigate to="/" replace />
           )}

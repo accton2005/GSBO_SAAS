@@ -116,6 +116,50 @@
         "ipAddress": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
       }
+    },
+    "SaaSPlan": {
+      "title": "SaaS Plan",
+      "description": "Definition of a subscription plan",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "maxUsers": { "type": "number" },
+        "maxStorageGB": { "type": "number" },
+        "maxDocumentsPerMonth": { "type": "number" },
+        "apiAccess": { "type": "boolean" },
+        "workflowEnabled": { "type": "boolean" },
+        "supportLevel": { "type": "string", "enum": ["standard", "priority", "dedicated"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "status", "createdAt"]
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Organization subscription instance",
+      "type": "object",
+      "properties": {
+        "organizationId": { "type": "string" },
+        "planId": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["trial", "active", "expired", "suspended"] },
+        "billingCycle": { "type": "string", "enum": ["monthly", "yearly"] }
+      },
+      "required": ["organizationId", "planId", "startDate", "status"]
+    },
+    "SaaSActivityLog": {
+      "title": "SaaS Activity Log",
+      "description": "Super Admin activity logs",
+      "type": "object",
+      "properties": {
+        "adminId": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -146,6 +190,18 @@
     "/api_logs/{id}": {
       "schema": "APILog",
       "description": "API request logs"
+    },
+    "/saas_plans/{id}": {
+      "schema": "SaaSPlan",
+      "description": "SaaS subscription plans"
+    },
+    "/subscriptions/{id}": {
+      "schema": "Subscription",
+      "description": "Organization subscriptions"
+    },
+    "/saas_activity_logs/{id}": {
+      "schema": "SaaSActivityLog",
+      "description": "Super Admin logs"
     }
   }
 }

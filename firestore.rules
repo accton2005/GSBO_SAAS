@@ -102,8 +102,9 @@ service cloud.firestore {
              data.organizationId is string &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              isValidEmail(data.email) &&
-             data.role in ['admin', 'agent', 'viewer', 'superadmin'] &&
-             isValidDateString(data.createdAt);
+             data.role in ['admin', 'agent', 'viewer', 'superadmin', 'secretariat', 'chef_service', 'direction'] &&
+             isValidDateString(data.createdAt) &&
+             (!('password' in data) || (data.password is string && data.password.size() >= 4));
     }
 
     function isValidCourrier(data) {
@@ -161,10 +162,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId) || belongsToOrg(resource.data.organizationId) || isSuperAdmin();
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
-                    (request.resource.data.role != 'admin' || 
-                     get(/databases/$(database)/documents/organizations/$(request.resource.data.organizationId)).data.createdBy == request.auth.uid ||
-                     isAdmin());
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) || 
+                     (belongsToOrg(request.resource.data.organizationId) && getUserData().role == 'admin') || 
+                     isSuperAdmin());
       allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
                     ((isOwner(userId) && request.resource.data.role == resource.data.role) || 
                      (belongsToOrg(resource.data.organizationId) && getUserData().role == 'admin') || 
