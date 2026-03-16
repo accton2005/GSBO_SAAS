@@ -40,15 +40,9 @@ export const LandingPage: React.FC = () => {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/login')}
-              className="text-sm font-bold text-slate-900 hover:text-indigo-600 transition-colors uppercase tracking-widest"
+              className="bg-indigo-600 text-white px-8 py-3 rounded-full font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
             >
               Connexion
-            </button>
-            <button 
-              onClick={() => navigate('/register')}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-full font-bold text-sm uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-            >
-              Essai Gratuit
             </button>
           </div>
         </div>
@@ -70,10 +64,10 @@ export const LandingPage: React.FC = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button 
-                onClick={() => navigate('/register')}
+                onClick={() => navigate('/login')}
                 className="bg-slate-900 text-white px-10 py-5 rounded-full font-bold text-lg uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-3 group"
               >
-                Démarrer maintenant
+                Accéder à la plateforme
                 <ArrowRight className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button className="px-10 py-5 rounded-full font-bold text-lg uppercase tracking-widest border-2 border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all">
@@ -185,10 +179,10 @@ export const LandingPage: React.FC = () => {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 relative z-10">
             <button 
-              onClick={() => navigate('/register')}
+              onClick={() => navigate('/login')}
               className="bg-white text-indigo-600 px-12 py-5 rounded-full font-bold text-lg uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl"
             >
-              Créer mon compte
+              Se connecter
             </button>
             <button className="bg-indigo-700 text-white px-12 py-5 rounded-full font-bold text-lg uppercase tracking-widest hover:bg-indigo-800 transition-all border border-white/20">
               Contacter l'équipe

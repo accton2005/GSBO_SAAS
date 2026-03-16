@@ -112,5 +112,61 @@ export const mysqlService = {
       body: JSON.stringify(data)
     });
     if (!response.ok) throw new Error('Failed to update organization');
+  },
+
+  deleteOrganization: async (orgId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/organizations.php?id=${orgId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete organization');
+  },
+
+  // Services
+  getServices: async (orgId: string): Promise<any[]> => {
+    const response = await fetch(`${API_BASE_URL}/services.php?orgId=${orgId}`);
+    if (!response.ok) throw new Error('Failed to fetch services');
+    return await response.json();
+  },
+
+  createService: async (serviceData: any): Promise<string> => {
+    const response = await fetch(`${API_BASE_URL}/services.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(serviceData)
+    });
+    if (!response.ok) throw new Error('Failed to create service');
+    const data = await response.json();
+    return data.id;
+  },
+
+  updateService: async (serviceId: string, data: any): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/services.php?id=${serviceId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error('Failed to update service');
+  },
+
+  deleteService: async (serviceId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/services.php?id=${serviceId}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete service');
+  },
+
+  // Audit Logs
+  getAuditLogs: async (orgId: string): Promise<any[]> => {
+    const response = await fetch(`${API_BASE_URL}/audit_logs.php?orgId=${orgId}`);
+    if (!response.ok) throw new Error('Failed to fetch audit logs');
+    return await response.json();
+  },
+
+  createAuditLog: async (logData: any): Promise<void> => {
+    await fetch(`${API_BASE_URL}/audit_logs.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(logData)
+    });
   }
 };

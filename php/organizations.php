@@ -38,5 +38,42 @@ switch($method) {
             echo json_encode(["message" => "Organization created", "id" => $id]);
         }
         break;
+
+    case 'PUT':
+        $id = $_GET['id'];
+        $data = json_decode(file_get_contents("php://input"));
+        $fields = [];
+        foreach($data as $key => $value) {
+            if ($key !== 'id') $fields[] = "$key = :$key";
+        }
+        $query = "UPDATE organizations SET " . implode(', ', $fields) . " WHERE id = :id";
+        $stmt = $conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        foreach($data as $key => $value) {
+            if ($key !== 'id') {
+                if ($key === 'settings') $value = json_encode($value);
+                $stmt->bindValue(":$key", $value);
+            }
+        }
+        if ($stmt->execute()) {
+            echo json_encode(["message" => "Organization updated"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["message" => "Unable to update organization"]);
+        }
+        break;
+
+    case 'DELETE':
+        $id = $_GET['id'];
+        $query = "DELETE FROM organizations WHERE id = :id";
+        $stmt = $conn->prepare($query);
+        $stmt->bindParam(':id', $id);
+        if ($stmt->execute()) {
+            echo json_encode(["message" => "Organization deleted"]);
+        } else {
+            http_response_code(500);
+            echo json_encode(["message" => "Unable to delete organization"]);
+        }
+        break;
 }
 ?>

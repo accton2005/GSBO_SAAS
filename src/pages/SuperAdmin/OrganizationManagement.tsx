@@ -10,9 +10,14 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  X,
+  Globe,
+  Mail,
+  Shield
 } from 'lucide-react';
-import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, Timestamp, addDoc, setDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 interface Organization {
@@ -31,6 +36,17 @@ const OrganizationManagement: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form state
+  const [newOrg, setNewOrg] = useState({
+    name: '',
+    domain: '',
+    adminEmail: '',
+    adminName: '',
+    planId: 'starter'
+  });
 
   useEffect(() => {
     fetchOrganizations();
@@ -42,8 +58,6 @@ const OrganizationManagement: React.FC = () => {
       const snapshot = await getDocs(query(collection(db, 'organizations'), orderBy('createdAt', 'desc')));
       const orgsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Organization));
       
-      // In a real app, we'd fetch user counts and plan names too
-      // For now, we'll mock some of these fields
       const enrichedOrgs = orgsList.map(org => ({
         ...org,
         planName: org.currentPlanId === 'starter' ? 'Starter' : 'Professional',
@@ -56,6 +70,46 @@ const OrganizationManagement: React.FC = () => {
       console.error('Error fetching organizations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateOrganization = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      // 1. Create Organization
+      const orgRef = await addDoc(collection(db, 'organizations'), {
+        name: newOrg.name,
+        domain: newOrg.domain,
+        status: 'active',
+        currentPlanId: newOrg.planId,
+        createdAt: new Date().toISOString(),
+        settings: {
+          appName: newOrg.name,
+          primaryColor: '#6366f1',
+          secondaryColor: '#10b981'
+        }
+      });
+
+      // 2. Create Admin User (Placeholder - in a real app you'd handle auth better)
+      // For now we just create the user document. The user will need to login with this email.
+      const userUid = `admin_${Math.random().toString(36).substr(2, 9)}`;
+      await setDoc(doc(db, 'users', userUid), {
+        organizationId: orgRef.id,
+        name: newOrg.adminName,
+        email: newOrg.adminEmail,
+        role: 'admin',
+        createdAt: new Date().toISOString()
+      });
+
+      setIsModalOpen(false);
+      setNewOrg({ name: '', domain: '', adminEmail: '', adminName: '', planId: 'starter' });
+      fetchOrganizations();
+    } catch (error) {
+      console.error('Error creating organization:', error);
+      alert('Erreur lors de la création de l\'organisation');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -97,11 +151,141 @@ const OrganizationManagement: React.FC = () => {
               className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             />
           </div>
-          <button className="p-3 bg-white border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-50 transition-all">
-            <Filter size={20} />
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 shrink-0"
+          >
+            <Plus size={20} />
+            <span className="hidden sm:inline">Nouvelle Organisation</span>
           </button>
         </div>
       </div>
+
+      {/* Creation Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Nouvelle Organisation</h3>
+                  <p className="text-xs text-slate-500 font-medium">Inscrivez une nouvelle administration sur la plateforme</p>
+                </div>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl transition-all">
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateOrganization} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Nom de l'administration</label>
+                  <div className="relative group">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                    <input 
+                      type="text"
+                      required
+                      value={newOrg.name}
+                      onChange={e => setNewOrg({...newOrg, name: e.target.value})}
+                      placeholder="ex: Mairie de Paris"
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600 outline-none transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Domaine (Sous-domaine)</label>
+                  <div className="relative group">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                    <input 
+                      type="text"
+                      required
+                      value={newOrg.domain}
+                      onChange={e => setNewOrg({...newOrg, domain: e.target.value})}
+                      placeholder="mairie-paris"
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600 outline-none transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Nom de l'administrateur</label>
+                  <div className="relative group">
+                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                    <input 
+                      type="text"
+                      required
+                      value={newOrg.adminName}
+                      onChange={e => setNewOrg({...newOrg, adminName: e.target.value})}
+                      placeholder="Prénom Nom"
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600 outline-none transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email de l'administrateur</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={18} />
+                    <input 
+                      type="email"
+                      required
+                      value={newOrg.adminEmail}
+                      onChange={e => setNewOrg({...newOrg, adminEmail: e.target.value})}
+                      placeholder="admin@domaine.gov"
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-600 outline-none transition-all font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Plan de souscription</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      type="button"
+                      onClick={() => setNewOrg({...newOrg, planId: 'starter'})}
+                      className={`p-4 rounded-2xl border-2 transition-all text-left ${newOrg.planId === 'starter' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100 hover:border-indigo-200'}`}
+                    >
+                      <div className="font-bold text-slate-900">Starter</div>
+                      <div className="text-xs text-slate-500">Jusqu'à 10 utilisateurs</div>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setNewOrg({...newOrg, planId: 'pro'})}
+                      className={`p-4 rounded-2xl border-2 transition-all text-left ${newOrg.planId === 'pro' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-100 hover:border-indigo-200'}`}
+                    >
+                      <div className="font-bold text-slate-900">Professional</div>
+                      <div className="text-xs text-slate-500">Utilisateurs illimités</div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-8 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all uppercase tracking-widest text-sm"
+                >
+                  Annuler
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-[2] px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 uppercase tracking-widest text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? 'Création...' : 'Créer l\'organisation'}
+                  {!isSubmitting && <Shield size={18} />}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

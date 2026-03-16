@@ -11,7 +11,8 @@ import {
   BarChart3,
   LogOut,
   GitBranch,
-  Settings2
+  Settings2,
+  Mail
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -27,7 +28,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ role, orgName }) => {
-  const { logout } = useAuth();
+  const { logout, organization } = useAuth();
   const isAdmin = role === 'admin' || role === 'superadmin';
   const isSuperAdmin = role === 'superadmin';
 
@@ -49,9 +50,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, orgName }) => {
 
   return (
     <aside className="w-64 bg-slate-900 text-white h-screen flex flex-col sticky top-0">
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-xl font-bold truncate">{orgName || 'Gestion Courrier'}</h1>
-        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider">{role}</p>
+      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+        {organization?.settings?.logo || organization?.logo ? (
+          <img 
+            src={organization.settings?.logo || organization.logo} 
+            alt="Logo" 
+            className="w-10 h-10 rounded-lg object-contain bg-white p-1" 
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0">
+            <Mail className="text-white" size={20} />
+          </div>
+        )}
+        <div className="min-w-0">
+          <h1 className="text-sm font-bold truncate leading-tight">{orgName || 'Gestion Courrier'}</h1>
+          <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider font-bold">{role}</p>
+        </div>
       </div>
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
